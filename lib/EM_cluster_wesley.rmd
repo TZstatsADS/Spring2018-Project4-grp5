@@ -16,11 +16,19 @@ head(colnames(train_1))
 ```
 
 ```{r}
+dim(test_1)
+dim(train_1)
+ncol(train_1)-2
+```
+
+
+
+```{r}
 # step 1 init the parameter
-num.C<- 4# number of the class
+num.C<- 3# number of the class
 M    <-ncol(train_1)-2  # number of the movies
 N    <-nrow(train_1) #number of the users
-M
+
 M==length(colnames(train_1)[3:ncol(train_1)])
 
 
@@ -68,17 +76,18 @@ head(new_pi)
 
 ```{r}
 # step 3: Maximization
-maximization<-function(userhistory,pi,gamma){
+maximization<-function(myuserhistory,pi,gamma){
   #input: pi,user_behaviour,gamma
   #output: updated gamma, updated mu
   new_mu     <-apply(pi,2,mean)
   
   row_sum_pi <-apply(pi,2,sum)
-  df_divide  <-matrix(rep(row_sum_pi,M),ncol=4,nrow=M,byrow = T)
+  df_divide  <-matrix(rep(row_sum_pi,M),ncol=num.C,nrow=M,byrow = T)
   
-  temp_1       <-t(as.matrix(userhistory==1)) %*% pi
+  temp_1       <-t(as.matrix(myuserhistory==1)) %*% pi
+  # print(temp_1)
   new_gamma_yes<-temp_1/df_divide
-  temp_2       <-t(as.matrix(userhistory==0)) %*% pi
+  temp_2       <-t(as.matrix(myuserhistory==0)) %*% pi
   new_gamma_no <-temp_2/df_divide
   
   gamma[,,"yes"] <-new_gamma_yes
@@ -88,7 +97,7 @@ maximization<-function(userhistory,pi,gamma){
 }
 
 list<-maximization(train_1[,3:ncol(train_1)],new_pi,gamma)
-list$mu
+# list$mu
 dim(list$gamma)
 ```
 
@@ -108,7 +117,7 @@ i=0
 repeat{
   i =i+1
   pi    <-get_expectation(userhistory,mu,gamma)
-  mylist<-maximization(userhistory = userhistory,pi,gamma)
+  mylist<-maximization(myuserhistory = userhistory,pi,gamma)
   gamma_l1_dev      <-sum(abs(mylist$gamma-gamma))
   mu_l1_dev         <-sum(abs(mylist$mu-mu))
   cat("\niteration ",i,"gamma abs(diff): ", gamma_l1_dev," mu abs(diff): ",mu_l1_dev)
@@ -121,25 +130,19 @@ repeat{
   mu    <-mylist$mu
 }
 
-mylist$gamma
+
 ```
 
-```{r}
-mylist$mu
-pred_prob<-mylist$mu
-```
-```{r}
-head(gamma[,,"yes"])
-```
+
+
 
 ```{r}
-dim(gamma[,,"yes"])
-
 # fix a user
 pred_one_user<-function(this.user,userhistory){
   # fix a user, return its predition
+    stopifnot(length(this.user)==1) # one user at a time
     yes_index  <-userhistory[this.user,]==1
-    no_index   <-userhistory[this.user,]!=1
+    
     
     this.user_class_likeli_yes<-apply(mylist$gamma[yes_index,,"yes"],2,prod)
     
@@ -148,35 +151,58 @@ pred_one_user<-function(this.user,userhistory){
     this.user.pred_yes<-(aligned_matrix_yes*mylist$gamma[,,"yes"])%*%mylist$mu
     
     denominator_user<-this.user_class_likeli_yes %*% mylist$mu
-    prob_yes<-this.user.pred_yes/as.numeric(denominator_user)
-    return(prob_yes>0.5)
+    prob_yes <-this.user.pred_yes/as.numeric(denominator_user)
+    
+    return(prob_yes)
 }
+
+```
+
+
+
+```{r}
 pred_one_user(c(1,3),userhistory)
-mypred<-sapply(seq(N),pred_one_user,userhistory)
-mypred<-t(mypred)
 ```
 
 
 ```{r}
-head(test_1)
+test_index      <-which(train_1$user %in% test_1$user)
+mypred          <-sapply(test_index,pred_one_user,userhistory)
+mypred          <-t(mypred)
+colnames(mypred)<-colnames(train_1)[3:ncol(train_1)]
+colindex<-colnames(mypred) %in% colnames(test_1)
+mypred<-mypred[,colindex]
 ```
 
 
 ```{r}
 
-test_index<-which(train_1$user %in% test_1$user)
-mypred<-sapply(test_index,pred_one_user,userhistory)
-mypred<-t(mypred)
+first <- function(x){return(rank(x,ties.method = "first"))}
+rank_score <- function(pred_mat, testset){
+  ### Rank Score
+  ### Input: pred_mat (predicted matrix calculated before)
+  ###        testset (true test dataset)
+  ### Output: The rank score of predicted value
+  d         <- 0.02
+  rank_pred <- ncol(pred_mat)+1-t(apply(pred_mat,1,first))
+  rank_test <- ncol(testset)+1-t(apply(testset,1,first))
+  logic     <- ifelse(testset - d > 0,testset - d,0)
+  
+  r_a       <- apply(1/(2^((rank_pred-1)/4)) * logic,1,sum)
+  r_a_max   <- apply(1/(2^((rank_test-1)/4)) * logic,1,sum)
+  r         <- 100*sum(r_a)/sum(r_a_max)
+  return(r)
+}
 
-mean(mypred!=test_1[,3:ncol(test_1)])
 ```
 
 
 
+```{r}
 
+rank_score(as.matrix(mypred),as.matrix(test_1[,3:ncol(test_1)]))
 
-
-
+```
 
 
 
