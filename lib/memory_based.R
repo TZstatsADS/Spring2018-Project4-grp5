@@ -13,34 +13,26 @@ data_process <- function(df) {
 
 sim_weight <- function(mat, method) {
   ### Similarity Weight Matrix
-  ### Input: mat (training data)
+  ### Input: mat (processed training data)
   ###        method ("pearson" or "spearman")
   ### Output: Similarity matrix by each method
+  
   if(method == "pearson") {
-    return(cor(t(mat), method = "pearson")) 
+    return(cor(t(mat), use = "pairwise.complete.obs", method = "pearson")) 
   } else {
-    return(cor(t(mat), method = "spearman"))
+    w <- matrix(NA,nrow=nrow(mat),ncol=nrow(mat))
+    for(i in 1:nrow(mat)){
+      w[i,] <- apply(mat,1,function(row){
+        index <- (!is.na(row))&(!is.na(mat[i,]))
+        if(sum(index)==0){
+          return(0)
+        }else{
+          return(cor(mat[i,index],row[index],method='spearman'))
+        }
+      })
+    }
+    return(w)
   }
-}
-
-###############################################################################
-############################## Variance Weighting #############################
-###############################################################################
-
-variance_weight <- function(matrix,method){
-  
-  matrix[is.na(matrix)] = 0
-  matrix.t = t(matrix)
-  var = apply(matrix,1,var)
-  min=min(var)
-  max=max(var)
-  weight<-function(vector){
-    vector * (var(vector)-min/max)
-  }
-  matrix=scale(matrix)
-  w = cor(apply(matrix,1,weight),use="everything",method=method)
-  
-  return(w)
 }
 
 ###############################################################################
@@ -49,38 +41,20 @@ variance_weight <- function(matrix,method){
 
 select_neighbors <- function(weight, thresholding = 0.5){
   ### Weight Thresholding
-  ### Input: weight (similarity weight matrix)
+  ### Input: weight (calculated weighted matrix)
   ###        thresholding (min-abs-corr)
   ### Output: A list of neighbors's index for each user
+  
   list_neighbors <- list()
   n <- nrow(weight)
   for(i in 1:n){
     eachrow <- weight[i,]
-    index <- which((abs(eachrow) > thresholding)&(eachrow != 1))
+    # select index of correlation values which are greater than the default thresholding
+    index <- which((abs(eachrow) > thresholding)&(eachrow != 1)) 
     list_neighbors[[i]] <- index
   }
   return(list_neighbors)
 }
-
-#select_neighbors2 <- function(weight, num = 20){
-  ### Weight Thresholding
-  ### Input: weight (similarity weight matrix)
-  ###        thresholding (min-abs-corr)
-  ### Output: A list of neighbors's index for each user
-#  list_neighbors <- list()
-#  n <- nrow(weight)
-#  for(i in 1:n){
-#    eachrow <- weight[i,]
-#    index <- order(abs(eachrow),decreasing = T)[2:num+1]
-#    list_neighbors[[i]] <- index
-#  }  return(list_neighbors)
-#}
-
-###############################################################################
-##################################### SimRank #################################
-###############################################################################
-
-
 
 ###############################################################################
 ########################### Producing a Prediction ############################
@@ -88,11 +62,12 @@ select_neighbors <- function(weight, thresholding = 0.5){
 
 prediction_1 <- function(testset = test_1, trainset = train_1, weight, list_neighbors){
   ### Rating Normalization: Deviation from mean
-  ### Input: testset (MS test dataset)
-  ###        trainset (MS train dataset)
-  ###        weight (similarity weight matrix)
+  ### Input: testset (MS processed test dataset)
+  ###        trainset (MS processed train dataset)
+  ###        weight (calculated weighted matrix)
   ###        list_neighbors (A list of neighbors's index for each user)
   ### Output: A prediction matrix
+  
   n <- nrow(trainset)
   p <- ncol(trainset)
   pred_mat <- matrix(0, ncol = p, nrow = n)
@@ -122,19 +97,19 @@ prediction_1 <- function(testset = test_1, trainset = train_1, weight, list_neig
 
 prediction_2 <- function(testset = test_2, trainset = train_2, weight, list_neighbors){
   ### Rating Normalization: Deviation from mean
-  ### Input: testset (Movie test dataset)
-  ###        trainset (Movie train dataset)
-  ###        weight (similarity weight matrix)
+  ### Input: testset (Movie processed test dataset)
+  ###        trainset (Movie processed train dataset)
+  ###        weight (calculated weighted matrix)
   ###        list_neighbors (A list of neighbors's index for each user)
   ### Output: A prediction matrix
+  
   test_logic <- is.na(testset)
   n <- nrow(testset)
   p <- ncol(testset)
   pred_mat <- matrix(0, ncol = p, nrow = n)
-  trainset[trainset==0] <- NA
   avg_rate <- apply(trainset, 1, mean,na.rm = T)
   for(i in 1:nrow(trainset)){
-    colnames_not_na <- colnames(testset)[which(!is.na(testset[i,]))] # 
+    colnames_not_na <- colnames(testset)[which(!is.na(testset[i,]))] 
     neighbor_weight <- weight[i,list_neighbors[[i]]]
     neighbor_rate <- trainset[list_neighbors[[i]],colnames_not_na]
     l <- length(list_neighbors[[i]])
