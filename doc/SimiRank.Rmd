@@ -1,0 +1,105 @@
+---
+title: "proj4"
+author: "Jingtian Yao & Leran Li"
+date: "April 11, 2018"
+output: html_document
+---
+
+## Functions
+```{r}
+
+library(plyr)
+# Get simrank between 2 users
+user_simrank <- function(i,j,C,train){
+  if(i==j) return(1)
+  if(j!=i){
+    w<- sum(train[i,])*sum(train[j,])
+    index_a<- as.vector(vm[train[i,]==1]) # get index of movies watched by the ith user
+    index_b<- as.vector(vm[train[j,]==1])
+    f<- sum(movie_sim[index_a,index_b])/w
+    res <- ifelse(is.nan(C*f),0,C*f)
+    return(res)
+  }
+}
+
+# Get simrank between 2 movies
+movie_simrank <- function(i,j,C,train){
+  if(i==j) return(1)
+  if(i!=j){
+    w<- sum(train[,i])*sum(train[,j])
+    index_a<- as.vector(vu[train[,i]==1]) # get the index of users who watched the ith movie
+    index_b<- as.vector(vu[train[,j]==1])
+    f<- sum(user_sim[index_a,index_b])/w
+    res <- ifelse(is.nan(C*f),0,C*f)
+    return(res)
+      }
+    }
+  
+
+
+# Simrank Algorithm
+sim_rank <- function(C1=0.8,C2=0.8,K = 5,df){
+  for(k in 1:K){
+    if(calc_user){
+      for(i in 1:user_n){
+        user_sim[i,] <<- sapply(1:user_n,user_simrank,j=i,C=C1,train = df) # get sim for each user
+        #cat(i,"\n")
+    }
+    }
+    
+    if(calc_movie){
+      for(l in 1:movie_n){
+      movie_sim[l,]<<-sapply(1:movie_n,movie_simrank,j=l,C=C2,train=df) # get sim for each movie
+        #cat(l,"\n")
+    }
+  }
+  }
+}
+```
+
+
+## Control Chunk
+```{r}
+train <- read.csv("../data/data_matrix/train_2.csv")
+#train[1:5,1:5]
+user_lst <- train$User
+movie_lst <- gsub("X","",colnames(train)[-c(1,2)])
+colnames(train)[-c(1,2)] <- movie_lst
+df <- train[,-c(1,2)] 
+rownames(df) <- user_lst
+df[df<5] <- 0
+df[is.na(df)] <- 0
+df[df>=5] <- 1
+#df[1:5,1:5]
+user_n<- nrow(df)
+movie_n<- ncol(df)
+df<- as.matrix(df)
+vm<- 1:movie_n
+vu<- 1:user_n
+# control simmilarity matrices
+calc_user = T
+calc_movie = F
+
+# initialize similarity matrices
+user_sim <- diag(nrow(df))
+movie_sim <- diag(ncol(df))
+
+sim_rank(C1 = 0.8, C2=0.8,K=1,df)
+
+colnames(user_sim) <- user_lst
+rownames(user_sim) <- user_lst
+#write.csv(user_sim,file = "../output/user_sim_iter1.csv")
+
+if(calc_user){
+  colnames(user_sim) <- user_lst
+  user_sim_mat <- cbind(user_lst,user_sim)
+  write.csv(user_sim_mat,file = "../output/usersim.csv",row.names = FALSE)
+}
+
+if(calc_movie){
+  colnames(movie_sim) <- movie_lst
+  movie_sim_mat <- cbind(movie_lst,movie_sim)
+  write.csv(movie_sim_mat,file = "../output/moviesim.csv",row.names = FALSE)
+}
+
+```

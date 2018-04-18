@@ -1,0 +1,145 @@
+---
+title: "Main"
+author: "Yuehan Kong (yk2756)"
+date: "4/9/2018"
+output: pdf_document
+---
+
+# Memory-Based Algorithms
+
+### Load Processed Data
+```{r}
+#setwd("~/Desktop/GR 5243/Project/Project4/doc")
+
+train_1 <- read.csv("../data/data_matrix/train_1.csv", header = T)
+train_2 <- read.csv("../data/data_matrix/train_2.csv", header = T)
+test_1 <- read.csv("../data/data_matrix/test_1.csv", header = T)
+test_2 <- read.csv("../data/data_matrix/test_2.csv", header = T)
+
+source("../lib/memory_based.R")
+source("../lib/evaluation.R")
+
+train_1 <- data_process(train_1)
+train_2 <- data_process(train_2)
+test_1 <- data_process(test_1)
+test_2 <- data_process(test_2)
+```
+
+### Similarity Weight
+##### Pearson correlation & Spearman correlation
+```{r}
+w_pearson_1 <- sim_weight(train_1,"pearson") 
+w_pearson_2 <- sim_weight(train_2,"pearson")
+w_spearman_1 <- sim_weight(train_1, "spearman")
+w_spearman_2 <- sim_weight(train_2, "spearman")
+
+#saveRDS(w_pearson_1, file = "../output/w_pearson_1.RData")
+#saveRDS(w_pearson_2, file = "../output/w_pearson_2.RData")
+#saveRDS(w_spearman_1, file = "../output/w_spearman_1.RData")
+#saveRDS(w_spearman_2, file = "../output/w_spearman_2.RData")
+```
+
+### Variance Weighting
+```{r}
+### MS Dataset
+var_pearson_1 <- variance_weight(train_1, "pearson")
+var_pearson_2 <- variance_weight(train_2, "pearson")
+var_spearman_1 <- variance_weight(train_1, "spearman")
+var_spearman_2 <- variance_weight(train_2, "spearman")
+
+#saveRDS(var_pearson_1, file = "../output/var_pearson_1.RData")
+#saveRDS(var_pearson_2, file = "../output/var_pearson_2.RData")
+#saveRDS(var_spearman_1, file = "../output/var_spearman_1.RData")
+#saveRDS(var_spearman_2, file = "../output/var_spearman_2.RData")
+```
+
+### Selecting Neighborhoods & Rating Normalization
+##### Selecting Neighborhoods: Weight thresholding
+##### Rating Normalization: Deviation from mean
+
+```{r}
+### Pearson
+neighbor_pearson_1 <- select_neighbors(w_pearson_1)
+neighbor_pearson_2 <- select_neighbors(w_pearson_2)
+pred_pearson_1 <- prediction_1(weight = w_pearson_1, list_neighbors = neighbor_pearson_1)
+pred_pearson_2 <- prediction_2(weight = w_pearson_2, list_neighbors = neighbor_pearson_2)
+
+### Spearman
+neighbor_spearman_1 <- select_neighbors(w_spearman_1)
+neighbor_spearman_2 <- select_neighbors(w_spearman_2)
+pred_spearman_1 <- prediction_1(weight = w_spearman_1, list_neighbors = neighbor_spearman_1)
+pred_spearman_2 <- prediction_2(weight = w_spearman_2, list_neighbors = neighbor_spearman_2)
+
+### SimRank
+w_simrank_2 <- read.csv("../output/usersim_final.csv")
+user_lst <- w_simrank_2[,1]
+w_simrank_2 <- w_simrank_2[,-1]
+colnames(w_simrank_2) <- user_lst
+rownames(w_simrank_2) <- user_lst
+w_simrank_2 <- as.matrix(w_simrank_2)
+neighbor_simrank_2 <- select_neighbors(weight = w_simrank_2, thresholding = 0.006)
+#neighbor_simrank_2_2 <- select_neighbors2(weight = w_simrank_2,num = 20)
+pred_simrank_2 <- prediction_2(weight = w_simrank_2,list_neighbors = neighbor_simrank_2)
+mae_simrank_2 <- mae(pred_simrank_2,test_2)
+
+### Pearson + Variance
+w_var_pearson_1 <- w_pearson_1*var_pearson_1
+w_var_pearson_2 <- w_pearson_2*var_pearson_2
+neighbor_w_var_pearson_1 <- select_neighbors(w_var_pearson_1)
+neighbor_w_var_pearson_2 <- select_neighbors(w_var_pearson_2)
+pred_w_var_pearson_1 <- prediction_1(weight = w_var_pearson_1, list_neighbors = neighbor_w_var_pearson_1)
+pred_w_var_pearson_2 <- prediction_2(weight = w_var_pearson_2, list_neighbors = neighbor_w_var_pearson_2)
+
+### Spearson + Variance
+w_var_spearman_1 <- w_spearman_1*var_spearman_1
+w_var_spearman_2 <- w_spearman_2*var_spearman_2
+neighbor_w_var_spearman_1 <- select_neighbors(w_var_spearman_1)
+neighbor_w_var_spearman_2 <- select_neighbors(w_var_spearman_2)
+pred_w_var_spearman_1 <- prediction_1(weight = w_var_spearman_1, list_neighbors = neighbor_w_var_spearman_1)
+pred_w_var_spearman_2 <- prediction_2(weight = w_var_spearman_2, list_neighbors = neighbor_w_var_spearman_2)
+
+### SimRank + Variance
+w_var_simrank_2 <- w_simrank_2*var_pearson_2
+w_var_simrank_2 <- as.matrix(w_var_simrank_2)
+pred_w_var_simrank_2 <- prediction_2(weight = w_var_simrank_2,list_neighbors = neighbor_simrank_2)
+
+
+```
+
+### Evaluation
+##### MAE 
+```{r}
+### Movie Dataset
+mae_pearson_2 <- mae(pred_pearson_2, test_2)
+mae_spearman_2 <- mae(pred_spearman_2, test_2)
+mae_w_var_pearson_2 <- mae(pred_w_var_pearson_2, test_2)
+mae_w_var_spearman_2 <- mae(pred_w_var_spearman_2, test_2)
+mae_simrank_2 <- mae(pred_simrank_2,test_2)
+
+mae_pearson_2
+mae_spearman_2
+mae_w_var_pearson_2
+mae_w_var_spearman_2
+```
+
+##### Rank Score
+```{r}
+### MS Dataset
+rankscore_pearson_1 <- rank_score(pred_pearson_1, test_1)
+rankscore_spearman_1 <- rank_score(pred_spearman_1, test_1)
+rankscore_w_var_pearson_1 <- rank_score(pred_w_var_pearson_1, test_1)
+rankscore_w_var_spearman_1 <- rank_score(pred_w_var_spearman_1, test_1)
+
+rankscore_pearson_1
+rankscore_spearman_1
+rankscore_w_var_pearson_1
+rankscore_w_var_spearman_1
+```
+
+
+
+
+
+
+
+
