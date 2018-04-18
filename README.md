@@ -9,7 +9,7 @@ Term: Spring 2018
 + Team members
 	+ Yuehan Kong (yk2756@columbia.edu)
 	+ Wesley Tao
-	+ Keran Li
+	+ Keran Li (kl2993@columbia.edu)
 	+ Jingtian Yao (jy2867@columbia.edu)
 	+ Wenyuan Gu (wg2306@columbia.edu)
 + Project summary: In this project, we perform different collaborative filtering algorithms on two datasets: MS dataset and movie dataset. The algorithms include memory-based algorithms (specifying similarity weight, variance weighting and method of selecting neighbours) and model-based algorithms (cluster models). We evaluate and compare a pair of algorithms for collaborative filtering based on MAE and rank score.
@@ -20,7 +20,7 @@ Term: Spring 2018
  
  ![image](figs/result2.png) 
 **Contribution statement**: 
-+ Jingtian Yao and Keran Li: Prepocessed the raw data and implemented the sim rank algorithm.
++ Jingtian Yao and Keran Li: Preprocessed the raw data and implemented the sim rank algorithm.
 + Wenyuan Gu: Was responsible for the cluster model and weighted variance.
 + Yuehan Kong: Implemented the pearson correlation, spearman correlation and selecting neighbors algorithm; built the memory_based.r; wrote the mae and rank score evaluation; wrote the main.rmd; the presenter of this project.
 
