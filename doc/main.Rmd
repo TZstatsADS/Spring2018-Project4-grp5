@@ -71,7 +71,10 @@ pred_spearman_1 <- prediction_1(weight = w_spearman_1, list_neighbors = neighbor
 pred_spearman_2 <- prediction_2(weight = w_spearman_2, list_neighbors = neighbor_spearman_2)
 
 ### SimRank
-w_simrank_2 <- read.csv("../output/usersim_final.csv")
+load("../output/user_sim1.RData")
+load("../output/user_sim2.RData")
+w_simrank_2 <- rbind(user1,user2)
+#w_simrank_2 <- read.csv("../output/usersim_final.csv")
 user_lst <- w_simrank_2[,1]
 w_simrank_2 <- w_simrank_2[,-1]
 colnames(w_simrank_2) <- user_lst
