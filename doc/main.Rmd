@@ -1,0 +1,225 @@
+---
+title: "Main"
+author: "Yuehan Kong (yk2756)"
+date: "4/9/2018"
+output: pdf_document
+---
+
+# Memory-Based Algorithms
+
+### Step 0: Install necessary packages
+```{r, message=FALSE}
+list.of.packages <- c("MCMCpack", "ggplot2", "readr")
+
+packages.needed=setdiff(list.of.packages, 
+                        intersect(installed.packages()[,1], 
+                                  list.of.packages))
+if(length(packages.needed)>0){
+  install.packages(packages.needed, dependencies = TRUE)
+}
+
+library("MCMCpack")
+library("ggplot2")
+library("readr")
+```
+
+### Step 1: Load Processed Data
+```{r}
+setwd("~/Desktop/GR 5243/Project/Project4/doc")
+
+train_1 <- read.csv("../data/data_matrix/train_1.csv", header = T)
+train_2 <- read.csv("../data/data_matrix/train_2.csv", header = T)
+test_1 <- read.csv("../data/data_matrix/test_1.csv", header = T)
+test_2 <- read.csv("../data/data_matrix/test_2.csv", header = T)
+
+source("../lib/memory_based.R")
+source("../lib/evaluation.R")
+
+train_1 <- data_process(train_1)
+train_2 <- data_process(train_2)
+test_1 <- data_process(test_1)
+test_2 <- data_process(test_2)
+```
+
+### Step 2: Similarity Weight
+##### Pearson correlation & Spearman correlation
+```{r, message=FALSE, warning=FALSE}
+#w_pearson_1 <- sim_weight(train_1,"pearson") 
+#w_pearson_2 <- sim_weight(train_2,"pearson")
+#w_spearman_1 <- sim_weight(train_1, "spearman")
+#w_spearman_2 <- sim_weight(train_2, "spearman")
+
+#w_pearson_1[is.na(w_pearson_1)] = 0
+#w_pearson_2[is.na(w_pearson_2)] = 0
+#w_spearman_1[is.na(w_spearman_1)] = 0
+#w_spearman_2[is.na(w_spearman_2)] = 0
+
+#saveRDS(w_pearson_1, file = "../output/w_pearson_1.RData")
+#saveRDS(w_pearson_2[1:2528,], file = "../output/w_pearson_2(1).RData")
+#saveRDS(w_pearson_2[2529:5055,], file = "../output/w_pearson_2(2).RData")
+#saveRDS(w_spearman_1, file = "../output/w_spearman_1.RData")
+#saveRDS(w_spearman_2[1:2528,], file = "../output/w_spearman_2(1).RData")
+#saveRDS(w_spearman_2[2529:5055,], file = "../output/w_spearman_2(2).RData")
+
+w_pearson_1 <- read_rds("../output/w_pearson_1.RData")
+w_pearson_2_1 <- read_rds("../output/w_pearson_2(1).RData")
+w_pearson_2_2 <- read_rds("../output/w_pearson_2(2).RData")
+w_pearson_2 <- rbind(w_pearson_2_1, w_pearson_2_2)
+
+w_spearman_1 <- read_rds("../output/w_spearman_1.RData")
+w_spearman_2_1 <- read_rds("../output/w_spearman_2(1).RData")
+w_spearman_2_2 <- read_rds("../output/w_spearman_2(2).RData")
+w_spearman_2 <- rbind(w_spearman_2_1, w_spearman_2_2)
+```
+
+##### SimRank
+```{r}
+#w_simrank_2 <- read.csv("../output/usersim_final.csv")
+load("../output/user_sim1.RData")
+load("../output/user_sim2.RData")
+w_simrank_2 <- rbind(user1,user2)
+user_lst <- w_simrank_2[,1]
+w_simrank_2 <- w_simrank_2[,-1]
+colnames(w_simrank_2) <- user_lst
+rownames(w_simrank_2) <- user_lst
+```
+
+### Step 3: Variance Weighting
+```{r}
+var_1 <- read_rds("../output/variance_weight_1.RData") # MS Dataset
+var_2 <- read_rds("../output/variance_weight_2.RData") # Movie Dataset
+```
+
+### Step 4: Selecting Neighborhoods & Rating Normalization
+##### Selecting Neighborhoods: Weight thresholding
+##### Rating Normalization: Deviation from mean
+
+```{r}
+### Pearson
+neighbor_pearson_1 <- select_neighbors(w_pearson_1)
+neighbor_pearson_2 <- select_neighbors(w_pearson_2)
+pred_pearson_1 <- prediction_1(weight = w_pearson_1, list_neighbors = neighbor_pearson_1)
+pred_pearson_2 <- prediction_2(weight = w_pearson_2, list_neighbors = neighbor_pearson_2)
+
+### Spearman
+neighbor_spearman_1 <- select_neighbors(w_spearman_1)
+neighbor_spearman_2 <- select_neighbors(w_spearman_2)
+pred_spearman_1 <- prediction_1(weight = w_spearman_1, list_neighbors = neighbor_spearman_1)
+pred_spearman_2 <- prediction_2(weight = w_spearman_2, list_neighbors = neighbor_spearman_2)
+
+### SimRank
+w_simrank_2 <- as.matrix(w_simrank_2)
+neighbor_simrank_2 <- select_neighbors(weight = w_simrank_2, thresholding = 0.006)
+pred_simrank_2 <- prediction_2(weight = w_simrank_2,list_neighbors = neighbor_simrank_2)
+
+### Pearson + Variance
+w_var_pearson_1 <- w_pearson_1*var_1 
+w_var_pearson_2 <- w_pearson_2*var_2
+neighbor_w_var_pearson_1 <- select_neighbors(w_var_pearson_1)
+neighbor_w_var_pearson_2 <- select_neighbors(w_var_pearson_2)
+pred_w_var_pearson_1 <- prediction_1(weight = w_var_pearson_1, list_neighbors = neighbor_w_var_pearson_1)
+pred_w_var_pearson_2 <- prediction_2(weight = w_var_pearson_2, list_neighbors = neighbor_w_var_pearson_2)
+
+### Spearson + Variance
+w_var_spearman_1 <- w_spearman_1*var_1
+w_var_spearman_2 <- w_spearman_2*var_2
+neighbor_w_var_spearman_1 <- select_neighbors(w_var_spearman_1)
+neighbor_w_var_spearman_2 <- select_neighbors(w_var_spearman_2)
+pred_w_var_spearman_1 <- prediction_1(weight = w_var_spearman_1, list_neighbors = neighbor_w_var_spearman_1)
+pred_w_var_spearman_2 <- prediction_2(weight = w_var_spearman_2, list_neighbors = neighbor_w_var_spearman_2)
+
+### SimRank + Variance
+w_var_simrank_2 <- w_simrank_2*var_2
+w_var_simrank_2 <- as.matrix(w_var_simrank_2)
+neighbor_var_simrank_2 <- select_neighbors(weight = w_var_simrank_2, thresholding = 0.006)
+pred_w_var_simrank_2 <- prediction_2(weight = w_var_simrank_2,list_neighbors = neighbor_var_simrank_2)
+```
+
+### Step 5: Evaluation
+##### MAE 
+```{r}
+### Movie Dataset
+mae_pearson_2 <- mae(pred_pearson_2, test_2)
+mae_spearman_2 <- mae(pred_spearman_2, test_2)
+mae_simrank_2 <- mae(pred_simrank_2,test_2)
+mae_w_var_pearson_2 <- mae(pred_w_var_pearson_2, test_2)
+mae_w_var_spearman_2 <- mae(pred_w_var_spearman_2, test_2)
+mae_w_var_simrank_2 <- mae(pred_w_var_simrank_2, test_2)
+
+mae_pearson_2
+mae_spearman_2
+mae_simrank_2
+mae_w_var_pearson_2
+mae_w_var_spearman_2
+mae_w_var_simrank_2
+```
+
+##### Rank Score
+```{r}
+### MS Dataset
+rankscore_pearson_1 <- rank_score(pred_pearson_1, test_1)
+rankscore_spearman_1 <- rank_score(pred_spearman_1, test_1)
+rankscore_w_var_pearson_1 <- rank_score(pred_w_var_pearson_1, test_1)
+rankscore_w_var_spearman_1 <- rank_score(pred_w_var_spearman_1, test_1)
+
+rankscore_pearson_1
+rankscore_spearman_1
+rankscore_w_var_pearson_1
+rankscore_w_var_spearman_1
+```
+
+### Step 6: Plotting Main Results
+```{r}
+### MS Dataset
+method_1 <- c("pearson", "spearman", "pearson", "spearman")
+wet_1 <- c("none", "none", "var", "var")
+r_1 <- c(35.74765, 35.73527, 42.65232, 42.652)
+ms <- data.frame(Method = method_1, Weights = wet_1, RankScore = r_1)
+
+ggplot(data = ms, aes(x=Weights, y=RankScore, group = Method, colour = Method)) +
+  geom_point() +
+  geom_line() +
+  labs(title = "Rank Score for MS")
+
+### Movie Dataset
+method_2 <- c("pearson", "spearman", "simrank", "pearson", "spearman", "simrank")
+wet_2 <- c("none", "none", "none", "var", "var", "var")
+mae_2 <- c(1.083907, 1.074416, 1.043124, 1.068813, 1.069592, 1.141436)
+movie <- data.frame(Method = method_2, Weights = wet_2, MAE = mae_2)
+
+ggplot(data = movie, aes(x=Weights, y=MAE, group = Method, colour = Method)) +
+  geom_point() +
+  geom_line() +
+  labs(title = "MAE for Movie")
+```
+
+
+# Model-Based Algorithm
+
+### Step 1: Load Processed Data
+```{r}
+train_ms <- read.csv("../data/data_matrix/train_1.csv", header = T)
+test_ms <- read.csv("../data/data_matrix/test_1.csv", header = T)
+source("../lib/model_based.R")
+```
+
+### Step 2: Prediction
+```{r}
+pred_cluster<-cluster(train_ms,test_ms)
+```
+
+
+### Step 3: Evaluation: Rank Score
+```{r}
+rank_score(pred_cluster,as.matrix(test_ms[,3:ncol(test_ms)]))
+```
+
+
+
+
+
+
+
+
+
+
