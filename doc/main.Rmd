@@ -196,7 +196,7 @@ ggplot(data = movie, aes(x=Weights, y=MAE, group = Method, colour = Method)) +
 
 # Model-Based Algorithm
 
-### Step 0: Load Processed Data
+### Step 1: Load Processed Data
 ```{r}
 train_ms <- read.csv("../data/data_matrix/train_1.csv", header = T)
 test_ms <- read.csv("../data/data_matrix/test_1.csv", header = T)
