@@ -1,7 +1,7 @@
 # cluster
 library(MCMCpack)
 library(plyr)
-cluster<-function(train_1,test){
+cluster<-function(train_1,test_1){
 # step 1 init the parameter
 num.C<- 3# number of the class
 M    <-ncol(train_1)-2  # number of the movies
