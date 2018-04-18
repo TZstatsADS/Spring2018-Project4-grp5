@@ -8,7 +8,7 @@ Term: Spring 2018
 + Projec title: Collaborative Filtering
 + Team members
 	+ Yuehan Kong (yk2756@columbia.edu)
-	+ Wesley Tao
+	+ Wesley Tao (wt2271@columbia.edu)
 	+ Keran Li (kl2993@columbia.edu)
 	+ Jingtian Yao (jy2867@columbia.edu)
 	+ Wenyuan Gu (wg2306@columbia.edu)
@@ -20,7 +20,8 @@ Term: Spring 2018
  
  ![image](figs/result2.png) 
 **Contribution statement**: 
-+ Jingtian Yao and Keran Li: Preprocessed the raw data and implemented the sim rank algorithm.
++ Jingtian Yao and Keran Li: Preprocessed the raw data,  implemented the sim rank algorithm and integrated the github file.
++ Wenyi Tao: Impleted the clustering algorithm.
 + Wenyuan Gu: Was responsible for the cluster model and weighted variance.
 + Yuehan Kong: Implemented the pearson correlation, spearman correlation and selecting neighbors algorithm; built the memory_based.r; wrote the mae and rank score evaluation; wrote the main.rmd; the presenter of this project.
 
