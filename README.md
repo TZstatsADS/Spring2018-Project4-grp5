@@ -7,7 +7,7 @@ Term: Spring 2018
 + Team 5
 + Projec title: Collaborative Filtering
 + Team members
-	+ Yuehan Kong
+	+ Yuehan Kong （yk2756@columbia.edu)
 	+ Wesley Tao
 	+ Keran Li
 	+ Jingtian Yao (jy2867@columbia.edu)
