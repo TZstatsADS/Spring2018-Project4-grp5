@@ -194,7 +194,7 @@ ggplot(data = movie, aes(x=Weights, y=MAE, group = Method, colour = Method)) +
 ```
 
 
-# Model-Based Algorithm
+# Model-Based Algorithms (Cluster Model)
 
 ### Step 1: Load Processed Data
 ```{r}
